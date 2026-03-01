@@ -1,0 +1,30 @@
+# Telegram
+python-telegram-bot>=20.7
+
+# Anthropic (DeepAgent)
+anthropic>=0.40.0
+
+# Google APIs (Gmail, Drive, YouTube)
+google-api-python-client>=2.100.0
+google-auth-httplib2>=0.2.0
+google-auth-oauthlib>=1.2.0
+
+# Slack
+slack-sdk>=3.26.0
+
+# Twitter / X
+tweepy>=4.14.0
+
+# GitHub
+PyGithub>=2.1.0
+
+# Browser automation
+playwright>=1.40.0
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
+# HTTP
+aiohttp>=3.9.0
+
+# Utilities
+python-dotenv>=1.0.0
