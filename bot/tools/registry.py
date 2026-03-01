@@ -87,5 +87,16 @@ def build_tools(config) -> dict:
     else:
         logger.info("GitHub not configured (GITHUB_TOKEN missing).")
 
+    # Mnemosyne Ledger (local filesystem — MNEMOSYNE_LEDGER_PATH must be set)
+    if config.mnemosyne_configured:
+        try:
+            from .mnemosyne_tool import MnemosyneTool
+            tools["mnemosyne"] = MnemosyneTool(config)
+            logger.info("Tool registered: mnemosyne")
+        except Exception as e:
+            logger.warning("Mnemosyne tool unavailable: %s", e)
+    else:
+        logger.info("Mnemosyne not configured (MNEMOSYNE_LEDGER_PATH missing).")
+
     logger.info("Active tools: %s", list(tools.keys()))
     return tools

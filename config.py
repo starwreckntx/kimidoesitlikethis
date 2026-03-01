@@ -42,6 +42,9 @@ class Config:
     # Browser
     BROWSER_HEADLESS: bool = os.getenv("BROWSER_HEADLESS", "true").lower() == "true"
 
+    # Mnemosyne Ledger (local filesystem path to the mnemosyne-ledger directory)
+    MNEMOSYNE_LEDGER_PATH: str = os.getenv("MNEMOSYNE_LEDGER_PATH", "")
+
     def validate(self) -> None:
         """Raise if critical config is missing."""
         if not self.TELEGRAM_BOT_TOKEN:
@@ -69,3 +72,7 @@ class Config:
     @property
     def youtube_configured(self) -> bool:
         return bool(self.YOUTUBE_API_KEY or self.google_configured)
+
+    @property
+    def mnemosyne_configured(self) -> bool:
+        return bool(self.MNEMOSYNE_LEDGER_PATH)
