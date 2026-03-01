@@ -48,6 +48,9 @@ def _split_message(text: str, max_len: int = TG_MAX_LEN) -> list[str]:
     return chunks
 
 
+_VALID_PROVIDERS = ("claude", "kimi", "gemini")
+
+
 class TelegramBot:
     def __init__(self, config: Config) -> None:
         self._config = config
@@ -61,6 +64,8 @@ class TelegramBot:
         self._pending_questions: dict[int, asyncio.Future] = {}
         # user_id → list of queued messages (received while agent is running)
         self._message_queue: dict[int, list[str]] = {}
+        # user_id → preferred provider ("claude" | "kimi" | "gemini")
+        self._user_provider: dict[int, str] = {}
 
         self._app: Optional[Application] = None
 
@@ -82,6 +87,7 @@ class TelegramBot:
         self._app.add_handler(CommandHandler("clear", self._cmd_clear))
         self._app.add_handler(CommandHandler("status", self._cmd_status))
         self._app.add_handler(CommandHandler("tools", self._cmd_tools))
+        self._app.add_handler(CommandHandler("model", self._cmd_model))
 
         # Text message handler
         self._app.add_handler(
@@ -99,6 +105,7 @@ class TelegramBot:
             BotCommand("clear", "Clear conversation history"),
             BotCommand("status", "Check if a task is running"),
             BotCommand("tools", "List available tools"),
+            BotCommand("model", "Switch AI model (claude/kimi/gemini)"),
         ])
 
         logger.info("Starting Telegram bot polling…")
@@ -168,6 +175,47 @@ class TelegramBot:
             "*Connected tools:*\n" + "\n".join(lines),
             parse_mode=ParseMode.MARKDOWN,
         )
+
+    async def _cmd_model(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        uid = update.effective_user.id
+        if not self._is_allowed(uid):
+            await update.message.reply_text("You are not authorised.")
+            return
+
+        args = context.args  # list of words after /model
+        current = self._user_provider.get(uid, "claude")
+
+        if not args:
+            # Show current model + available options
+            available = ["claude"]
+            if self._config.kimi_configured:
+                available.append("kimi")
+            if self._config.gemini_configured:
+                available.append("gemini")
+            await update.message.reply_text(
+                f"Current model: *{current}*\n"
+                f"Available: {', '.join(available)}\n\n"
+                f"Usage: `/model claude` | `/model kimi` | `/model gemini`",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return
+
+        choice = args[0].lower()
+        if choice not in _VALID_PROVIDERS:
+            await update.message.reply_text(
+                f"Unknown provider '{choice}'. Choose from: claude, kimi, gemini"
+            )
+            return
+
+        if choice == "kimi" and not self._config.kimi_configured:
+            await update.message.reply_text("Kimi is not configured. Set KIMI_API_KEY in .env.")
+            return
+        if choice == "gemini" and not self._config.gemini_configured:
+            await update.message.reply_text("Gemini is not configured. Set GEMINI_API_KEY in .env.")
+            return
+
+        self._user_provider[uid] = choice
+        await update.message.reply_text(f"Model switched to *{choice}*.", parse_mode=ParseMode.MARKDOWN)
 
     # ──────────────────────────────────────────────────────────────────
     # Message handlers
@@ -256,7 +304,8 @@ class TelegramBot:
                 self._pending_questions.pop(uid, None)
             return answer
 
-        agent = DeepAgent(self._config, self._tools, self._history)
+        provider = self._user_provider.get(uid, "claude")
+        agent = DeepAgent(self._config, self._tools, self._history, provider=provider)
         result = await agent.run(uid, text, ask_user_cb)
 
         # Send response (split if too long)
