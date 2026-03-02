@@ -23,6 +23,21 @@ import anthropic
 
 logger = logging.getLogger(__name__)
 
+def _get_google_access_token(config) -> str:
+    """Exchange the stored Google refresh token for a short-lived access token."""
+    from google.oauth2.credentials import Credentials
+    from google.auth.transport.requests import Request as GoogleRequest
+    creds = Credentials(
+        token=None,
+        refresh_token=config.GOOGLE_REFRESH_TOKEN,
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=config.GOOGLE_CLIENT_ID,
+        client_secret=config.GOOGLE_CLIENT_SECRET,
+    )
+    creds.refresh(GoogleRequest())
+    return creds.token
+
+
 # ── OpenAI-compatible provider configs ────────────────────────────────────────
 _PROVIDER_BASE_URLS = {
     "kimi": "https://api.moonshot.cn/v1",
@@ -87,7 +102,14 @@ class FallbackAgent:
 
     def __init__(self, config, tools_map: dict, provider: str) -> None:
         from openai import AsyncOpenAI  # lazy import – optional dependency
-        api_key = config.KIMI_API_KEY if provider == "kimi" else config.GEMINI_API_KEY
+
+        if provider == "kimi":
+            api_key = config.KIMI_API_KEY
+        elif config.gemini_uses_oauth:
+            api_key = _get_google_access_token(config)
+        else:
+            api_key = config.GEMINI_API_KEY
+
         self._client = AsyncOpenAI(
             api_key=api_key,
             base_url=_PROVIDER_BASE_URLS[provider],

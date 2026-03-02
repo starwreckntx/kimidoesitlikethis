@@ -91,4 +91,10 @@ class Config:
 
     @property
     def gemini_configured(self) -> bool:
-        return bool(self.GEMINI_API_KEY)
+        # API key takes precedence; OAuth falls back to Google credentials
+        return bool(self.GEMINI_API_KEY or self.google_configured)
+
+    @property
+    def gemini_uses_oauth(self) -> bool:
+        """True when Gemini auth uses Google OAuth rather than a dedicated API key."""
+        return not self.GEMINI_API_KEY and self.google_configured
