@@ -39,6 +39,14 @@ class Config:
     GITHUB_TOKEN: str = os.getenv("GITHUB_TOKEN", "")
     GITHUB_USERNAME: str = os.getenv("GITHUB_USERNAME", "")
 
+    # Fallback LLM providers (used when Claude usage is exhausted)
+    KIMI_API_KEY: str = os.getenv("KIMI_API_KEY", "")
+    KIMI_MODEL: str = os.getenv("KIMI_MODEL", "moonshot-v1-32k")
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+    # Which provider to auto-fallback to on Claude rate-limit: "kimi" | "gemini" | ""
+    FALLBACK_PROVIDER: str = os.getenv("FALLBACK_PROVIDER", "")
+
     # Browser
     BROWSER_HEADLESS: bool = os.getenv("BROWSER_HEADLESS", "true").lower() == "true"
 
@@ -76,3 +84,17 @@ class Config:
     @property
     def mnemosyne_configured(self) -> bool:
         return bool(self.MNEMOSYNE_LEDGER_PATH)
+
+    @property
+    def kimi_configured(self) -> bool:
+        return bool(self.KIMI_API_KEY)
+
+    @property
+    def gemini_configured(self) -> bool:
+        # API key takes precedence; OAuth falls back to Google credentials
+        return bool(self.GEMINI_API_KEY or self.google_configured)
+
+    @property
+    def gemini_uses_oauth(self) -> bool:
+        """True when Gemini auth uses Google OAuth rather than a dedicated API key."""
+        return not self.GEMINI_API_KEY and self.google_configured
