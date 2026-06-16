@@ -48,3 +48,7 @@ Persistent cross-session memory backed by a **separate git repository** at `MNEM
 - **The README is partially stale**: it omits the Kimi/Gemini fallback providers, the `/model` command, and the Mnemosyne tool. Treat this file and the code as authoritative over the README's architecture diagram.
 - Telegram messages are capped at 4096 chars; `_split_message` chunks long replies. Tool errors are caught and returned as strings (never raised into the loop) so one failing tool doesn't abort the turn.
 - The bot is **open to all users when `TELEGRAM_ALLOWED_USER_IDS` is empty** — that whitelist is the only auth boundary.
+
+## Lessons-learned training pairs
+
+`lessons-learned/` holds a JSONL training-pair set that ties observed model outputs to their corrections (see `lessons-learned/README.md` for the schema). When you fix a real bug here or catch one in review, **append a record** pairing the exact buggy output with the fix and naming the pattern — keep the set current rather than silently patching.
